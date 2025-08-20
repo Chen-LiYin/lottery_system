@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抽籤系統</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 400px 1fr;
+        gap: 30px;
+        height: calc(100vh - 40px);
+      }
+
+      .panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 20px;
+        text-align: center;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .lottery-wheel {
+        text-align: center;
+        padding: 20px;
+      }
+
+      .wheel-container {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        margin: 20px auto;
+      }
+
+      .wheel {
+        width: 100%;
+        height: 100%;
+        border: 8px solid #4a5568;
+        border-radius: 50%;
+        background: conic-gradient(
+          #ff6b6b 0deg 45deg,
+          #4ecdc4 45deg 90deg,
+          #45b7d1 90deg 135deg,
+          #96ceb4 135deg 180deg,
+          #feca57 180deg 225deg,
+          #ff9ff3 225deg 270deg,
+          #54a0ff 270deg 315deg,
+          #5f27cd 315deg 360deg
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        transition: transform 3s cubic-bezier(0.23, 1, 0.32, 1);
+        cursor: pointer;
+      }
+
+      .wheel:hover {
+        transform: scale(1.02);
+      }
+
+      .wheel.spinning {
+        cursor: not-allowed;
+      }
+
+      .pointer {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-top: 25px solid #e53e3e;
+        z-index: 10;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      }
+
+      .current-draw {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: bold;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .draw-button {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 20px rgba(238, 90, 36, 0.3);
+        margin-top: 20px;
+      }
+
+      .draw-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(238, 90, 36, 0.4);
+      }
+
+      .draw-button:disabled {
+        background: #a0aec0;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .student-list {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+      }
+
+      .student-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .student-list::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+      }
+
+      .student-list::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+      }
+
+      .student-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px 15px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+
+      .student-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .student-number {
+        font-weight: 600;
+        color: #4a5568;
+        font-size: 0.9rem;
+      }
+
+      .student-name {
+        color: #2d3748;
+        font-weight: 500;
+      }
+
+      .drawn-item {
+        background: linear-gradient(135deg, #48bb78, #38a169);
+        color: white;
+        border: none;
+      }
+
+      .drawn-item:hover {
+        transform: none;
+      }
+
+      .stats {
+        display: flex;
+        justify-content: space-between;
+        background: #edf2f7;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .stat-item {
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #4a5568;
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
+        color: #718096;
+        margin-top: 5px;
+      }
+
+      .reset-button {
+        background: #718096;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+      }
+
+      .reset-button:hover {
+        background: #4a5568;
+        transform: translateY(-1px);
+      }
+
+      @media (max-width: 1200px) {
+        .container {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto 1fr;
+          gap: 20px;
+        }
+
+        .wheel-container {
+          width: 250px;
+          height: 250px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 未抽出名單 -->
+      <div class="panel">
+        <h2>尚未抽出</h2>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-number" id="remaining-count">0</div>
+            <div class="stat-label">剩餘人數</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="total-count">0</div>
+            <div class="stat-label">總人數</div>
+          </div>
+        </div>
+        <div class="student-list" id="remaining-list">
+          <!-- 未抽出的學生名單 -->
+        </div>
+      </div>
+
+      <!-- 抽籤輪盤 -->
+      <div class="panel lottery-wheel">
+        <h2>抽籤輪盤</h2>
+        <div class="wheel-container">
+          <div class="pointer"></div>
+          <div class="wheel" id="wheel">
+            <div>點擊開始抽籤</div>
+          </div>
+        </div>
+        <div class="current-draw" id="current-draw">等待抽籤...</div>
+        <button class="draw-button" id="draw-button" onclick="startDraw()">
+          開始抽籤
+        </button>
+        <button class="reset-button" onclick="resetLottery()">重置所有</button>
+      </div>
+
+      <!-- 已抽出名單 -->
+      <div class="panel">
+        <h2>已抽出</h2>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-number" id="drawn-count">0</div>
+            <div class="stat-label">已抽出</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" id="progress-percent">0%</div>
+            <div class="stat-label">完成度</div>
+          </div>
+        </div>
+        <div class="student-list" id="drawn-list">
+          <!-- 已抽出的學生名單 -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 學生名單數據
+      const students = [
+        { number: "113423033", name: "詹凱程" },
+        { number: "114423001", name: "陳柏甫" },
+        { number: "114423002", name: "王廷瑜" },
+        { number: "114423003", name: "謝嘉盈" },
+        { number: "114423004", name: "彭琦崴" },
+        { number: "114423005", name: "賴劭穎" },
+        { number: "114423006", name: "陳莉豐" },
+        { number: "114423007", name: "潘維晟" },
+        { number: "114423008", name: "郭士揚" },
+        { number: "114423009", name: "林婷君" },
+        { number: "114423010", name: "郭明儒" },
+        { number: "114423011", name: "黃昱鈞" },
+        { number: "114423013", name: "楊佳炘" },
+        { number: "114423014", name: "陳信翰" },
+        { number: "114423015", name: "林靖恒" },
+        { number: "114423017", name: "蘇郁茜" },
+        { number: "114423018", name: "侯威華" },
+        { number: "114423019", name: "吳佩瑜" },
+        { number: "114423020", name: "陳欣妤" },
+        { number: "114423021", name: "林承駿" },
+        { number: "114423022", name: "林冠澔" },
+        { number: "114423023", name: "鄒雅雯" },
+        { number: "114423024", name: "陳慎" },
+        { number: "114423025", name: "黃仁和" },
+        { number: "114423026", name: "吳宇翰" },
+        { number: "114423027", name: "葉羿君" },
+        { number: "114423028", name: "李芝瑢" },
+        { number: "114423029", name: "王品淳" },
+        { number: "114423030", name: "黃毓芳" },
+        { number: "114423031", name: "郭潔蓉" },
+        { number: "114423032", name: "周怡湘" },
+        { number: "114423033", name: "朱芸萱" },
+        { number: "114423034", name: "簡柔恩" },
+        { number: "114423035", name: "黃櫳萱" },
+        { number: "114423036", name: "李采姈" },
+        { number: "114423037", name: "蕭筑云" },
+        { number: "114423038", name: "蘇文馨" },
+        { number: "114423039", name: "李恩齊" },
+        { number: "114423040", name: "張芮瑀" },
+        { number: "114423041", name: "林佩臻" },
+        { number: "114423042", name: "劉和媛" },
+        { number: "114423043", name: "李嶧" },
+        { number: "114423045", name: "鍾柏安" },
+        { number: "114423046", name: "蔣侑宸" },
+        { number: "114423047", name: "陳梓銜" },
+        { number: "114423048", name: "陳昱斌" },
+        { number: "114423049", name: "林秋香" },
+        { number: "114423050", name: "李佳蓁" },
+        { number: "114423051", name: "張謦麒" },
+        { number: "114423052", name: "黃詩涵" },
+        { number: "114423053", name: "廖柏廉" },
+        { number: "114423054", name: "陳冠豪" },
+        { number: "114423055", name: "吳霜" },
+        { number: "114423056", name: "彭家樺" },
+        { number: "114423057", name: "林秭礽" },
+        { number: "114423058", name: "林妤蓁" },
+        { number: "114423060", name: "謝承祐" },
+        { number: "114423061", name: "蔡宗曄" },
+        { number: "114423062", name: "葉宜萱" },
+        { number: "114423063", name: "林立翰" },
+        { number: "114423064", name: "朱宇婕" },
+        { number: "114423065", name: "謝侑明" },
+        { number: "114423066", name: "李佳蓁" },
+        { number: "114423067", name: "吳心平" },
+        { number: "114423068", name: "廖承偉" },
+        { number: "114423069", name: "何明哲" },
+        { number: "114423070", name: "謝亭茹" },
+        { number: "114423071", name: "柳炫州" },
+        { number: "114423072", name: "葉雅馨" },
+        { number: "114423073", name: "李若依" },
+        { number: "114423074", name: "陳昱心" },
+        { number: "114423075", name: "李軒毅" },
+      ];
+
+      let remainingStudents = [...students];
+      let drawnStudents = [];
+      let isDrawing = false;
+
+      // 初始化
+      function init() {
+        updateLists();
+        updateStats();
+      }
+
+      // 更新名單顯示
+      function updateLists() {
+        const remainingList = document.getElementById("remaining-list");
+        const drawnList = document.getElementById("drawn-list");
+
+        // 更新未抽出名單
+        remainingList.innerHTML = remainingStudents
+          .map(
+            (student) =>
+              `<div class="student-item">
+                    <span class="student-number">${student.number}</span>
+                    <span class="student-name">${student.name}</span>
+                </div>`
+          )
+          .join("");
+
+        // 更新已抽出名單
+        drawnList.innerHTML = drawnStudents
+          .map(
+            (student) =>
+              `<div class="student-item drawn-item">
+                    <span class="student-number">${student.number}</span>
+                    <span class="student-name">${student.name}</span>
+                </div>`
+          )
+          .join("");
+      }
+
+      // 更新統計
+      function updateStats() {
+        document.getElementById("remaining-count").textContent =
+          remainingStudents.length;
+        document.getElementById("total-count").textContent = students.length;
+        document.getElementById("drawn-count").textContent =
+          drawnStudents.length;
+        document.getElementById("progress-percent").textContent =
+          Math.round((drawnStudents.length / students.length) * 100) + "%";
+      }
+
+      // 開始抽籤
+      function startDraw() {
+        if (isDrawing || remainingStudents.length === 0) return;
+
+        isDrawing = true;
+        const drawButton = document.getElementById("draw-button");
+        const wheel = document.getElementById("wheel");
+        const currentDraw = document.getElementById("current-draw");
+
+        drawButton.disabled = true;
+        drawButton.textContent = "抽籤中...";
+        wheel.classList.add("spinning");
+
+        // 輪盤旋轉動畫
+        const spins = 3 + Math.random() * 3; // 3-6圈
+        const finalRotation = spins * 360 + Math.random() * 360;
+        wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+        // 快速切換顯示名字效果
+        let switchCount = 0;
+        const maxSwitches = 30;
+        const switchInterval = setInterval(() => {
+          if (switchCount < maxSwitches) {
+            const randomStudent =
+              remainingStudents[
+                Math.floor(Math.random() * remainingStudents.length)
+              ];
+            wheel.innerHTML = `<div>${randomStudent.number}<br>${randomStudent.name}</div>`;
+            switchCount++;
+          } else {
+            clearInterval(switchInterval);
+          }
+        }, 100);
+
+        // 3秒後停止並選出結果
+        setTimeout(() => {
+          // 隨機選擇一個學生
+          const randomIndex = Math.floor(
+            Math.random() * remainingStudents.length
+          );
+          const selectedStudent = remainingStudents[randomIndex];
+
+          // 移動到已抽出名單
+          drawnStudents.unshift(selectedStudent);
+          remainingStudents.splice(randomIndex, 1);
+
+          // 更新顯示
+          wheel.innerHTML = `<div>${selectedStudent.number}<br>${selectedStudent.name}</div>`;
+          currentDraw.innerHTML = ` ${selectedStudent.number} ${selectedStudent.name}`;
+
+          // 更新名單和統計
+          updateLists();
+          updateStats();
+
+          // 重置狀態
+          isDrawing = false;
+          wheel.classList.remove("spinning");
+          drawButton.disabled = remainingStudents.length === 0;
+          drawButton.textContent =
+            remainingStudents.length === 0 ? "抽籤完成" : "開始抽籤";
+
+          // 如果全部抽完
+          if (remainingStudents.length === 0) {
+            currentDraw.innerHTML = " 所有人都已抽出完畢！";
+          }
+        }, 3000);
+      }
+
+      // 重置抽籤
+      function resetLottery() {
+        if (isDrawing) return;
+
+        remainingStudents = [...students];
+        drawnStudents = [];
+
+        const wheel = document.getElementById("wheel");
+        const currentDraw = document.getElementById("current-draw");
+        const drawButton = document.getElementById("draw-button");
+
+        wheel.style.transform = "rotate(0deg)";
+        wheel.innerHTML = "<div>點擊開始抽籤</div>";
+        currentDraw.innerHTML = "等待抽籤...";
+        drawButton.disabled = false;
+        drawButton.textContent = "開始抽籤";
+
+        updateLists();
+        updateStats();
+      }
+
+      // 頁面載入時初始化
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
